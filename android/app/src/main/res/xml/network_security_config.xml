@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HTTP sin cifrar solo hacia estos dominios. Quitar bestvoiper.com cuando el servidor tenga HTTPS. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">bestvoiper.com</domain>
+        <!-- Desarrollo: emulador de Android -> API en la Mac -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>
