@@ -22,8 +22,11 @@ class Vehiculo {
   );
 
   /// "Mazda 3 · Rojo"
-  String get descripcion =>
-      [marca, modelo, color].whereType<String>().join(' · ');
+  String get descripcion => [
+    marca,
+    modelo,
+    color,
+  ].where((t) => t != null && t.isNotEmpty).join(' · ');
 }
 
 class Usuario {
