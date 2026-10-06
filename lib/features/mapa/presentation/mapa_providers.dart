@@ -3,7 +3,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../data/mapa_repository.dart';
+import '../data/ruta_repository.dart';
 import '../domain/filtros_mapa.dart';
+import '../domain/ruta.dart';
 import '../domain/sede_cercana.dart';
 
 /// Centro de Cartagena: se usa si no hay permiso de ubicación o el GPS no responde.
@@ -72,6 +74,37 @@ class SedeSeleccionadaNotifier extends Notifier<String?> {
 final sedeSeleccionadaProvider =
     NotifierProvider<SedeSeleccionadaNotifier, String?>(
       SedeSeleccionadaNotifier.new,
+    );
+
+class RutaActiva {
+  const RutaActiva({required this.sedeId, required this.ruta});
+
+  final String sedeId;
+  final Ruta ruta;
+}
+
+class RutaActivaNotifier extends Notifier<AsyncValue<RutaActiva?>> {
+  @override
+  AsyncValue<RutaActiva?> build() => const AsyncData(null);
+
+  Future<void> trazar({
+    required String sedeId,
+    required LatLng desde,
+    required LatLng hasta,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final ruta = await ref.read(rutaRepositoryProvider).trazar(desde, hasta);
+      return RutaActiva(sedeId: sedeId, ruta: ruta);
+    });
+  }
+
+  void limpiar() => state = const AsyncData(null);
+}
+
+final rutaActivaProvider =
+    NotifierProvider<RutaActivaNotifier, AsyncValue<RutaActiva?>>(
+      RutaActivaNotifier.new,
     );
 
 /// Los tests lo apagan para no descargar mosaicos de OpenStreetMap.
