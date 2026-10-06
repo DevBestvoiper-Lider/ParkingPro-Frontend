@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,21 +7,29 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/mensaje_error.dart';
 import '../../auth/domain/usuario.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../reservas/data/reservas_repository.dart';
 import '../data/perfil_repository.dart';
 
-/// Abre el formulario y devuelve el vehículo creado (o null si se cancela).
+/// Abre el formulario y devuelve el vehículo guardado (o null si se cancela).
 Future<Vehiculo?> agregarVehiculo(BuildContext context) =>
-    showModalBottomSheet<Vehiculo>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => const _AgregarVehiculo(),
-    );
+    formularioVehiculo(context);
+
+Future<Vehiculo?> formularioVehiculo(
+  BuildContext context, {
+  Vehiculo? inicial,
+}) => showModalBottomSheet<Vehiculo>(
+  context: context,
+  isScrollControlled: true,
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  ),
+  builder: (_) => _AgregarVehiculo(inicial: inicial),
+);
 
 class _AgregarVehiculo extends ConsumerStatefulWidget {
-  const _AgregarVehiculo();
+  const _AgregarVehiculo({this.inicial});
+
+  final Vehiculo? inicial;
 
   @override
   ConsumerState<_AgregarVehiculo> createState() => _AgregarVehiculoState();
@@ -28,10 +37,10 @@ class _AgregarVehiculo extends ConsumerStatefulWidget {
 
 class _AgregarVehiculoState extends ConsumerState<_AgregarVehiculo> {
   final _form = GlobalKey<FormState>();
-  final _placa = TextEditingController();
-  final _marca = TextEditingController();
-  final _modelo = TextEditingController();
-  final _color = TextEditingController();
+  late final _placa = TextEditingController(text: widget.inicial?.placa);
+  late final _marca = TextEditingController(text: widget.inicial?.marca);
+  late final _modelo = TextEditingController(text: widget.inicial?.modelo);
+  late final _color = TextEditingController(text: widget.inicial?.color);
   bool _guardando = false;
   String? _error;
 
@@ -51,23 +60,38 @@ class _AgregarVehiculoState extends ConsumerState<_AgregarVehiculo> {
     });
     try {
       final placa = _placa.text.replaceAll(RegExp(r'[\s-]'), '').toUpperCase();
-      final usuario = await ref
-          .read(perfilRepositoryProvider)
-          .agregarVehiculo(
-            placa: placa,
-            marca: _marca.text.trim(),
-            modelo: _modelo.text.trim(),
-            color: _color.text.trim(),
-          );
+      final marca = _marca.text.trim();
+      final modelo = _modelo.text.trim();
+      final color = _color.text.trim();
+      final repo = ref.read(perfilRepositoryProvider);
+      final inicial = widget.inicial;
+      final usuario = inicial == null
+          ? await repo.agregarVehiculo(
+              placa: placa,
+              marca: marca,
+              modelo: modelo,
+              color: color,
+            )
+          : await repo.actualizarVehiculo(
+              inicial.id,
+              placa: placa,
+              marca: marca,
+              modelo: modelo,
+              color: color,
+            );
       ref.read(authControllerProvider.notifier).actualizarUsuario(usuario);
-      if (mounted) {
-        Navigator.pop(
-          context,
-          usuario.vehiculos.firstWhere((v) => v.placa == placa),
-        );
+      ref.invalidate(resumenProvider);
+      final guardado = usuario.vehiculos
+          .where((v) => inicial != null ? v.id == inicial.id : v.placa == placa)
+          .firstOrNull;
+      if (!mounted) return;
+      if (guardado == null) {
+        setState(() => _error = 'No se pudo guardar el vehículo');
+        return;
       }
-    } on ApiException catch (e) {
-      setState(() => _error = e.mensaje);
+      Navigator.pop(context, guardado);
+    } catch (e) {
+      setState(() => _error = ApiException.desde(e).mensaje);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -88,9 +112,9 @@ class _AgregarVehiculoState extends ConsumerState<_AgregarVehiculo> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Agregar vehículo',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            Text(
+              widget.inicial == null ? 'Agregar vehículo' : 'Editar vehículo',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -145,7 +169,11 @@ class _AgregarVehiculoState extends ConsumerState<_AgregarVehiculo> {
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5),
                     )
-                  : const Text('Guardar vehículo'),
+                  : Text(
+                      widget.inicial == null
+                          ? 'Guardar vehículo'
+                          : 'Guardar cambios',
+                    ),
             ),
           ],
         ),

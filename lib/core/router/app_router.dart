@@ -8,7 +8,9 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/registro_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/mapa/presentation/mapa_screen.dart';
+import '../../features/reservas/presentation/mis_reservas_screen.dart';
 import '../../features/nueva_reserva/presentation/nueva_reserva_screen.dart';
+import '../../features/perfil/presentation/mis_vehiculos_screen.dart';
 import '../../features/perfil/presentation/perfil_screen.dart';
 import '../../features/shell/presentation/shell_screen.dart';
 import '../widgets/proximamente.dart';
@@ -79,10 +81,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/reservas',
-                builder: (_, _) => const Proximamente(
-                  titulo: 'Mis Reservas',
-                  icono: Icons.event_note,
-                ),
+                builder: (_, _) => const MisReservasScreen(),
               ),
             ],
           ),
@@ -95,10 +94,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/mis-plazas',
-                builder: (_, _) => const Proximamente(
-                  titulo: 'Mis Plazas',
-                  icono: Icons.directions_car,
-                ),
+                builder: (_, _) => const MisVehiculosScreen(),
               ),
             ],
           ),
